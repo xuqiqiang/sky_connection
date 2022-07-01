@@ -54,12 +54,27 @@ class WSServer extends _WSServer<ClientInfo> {
 
   ClientInfo? getClientInfo(WebSocket webSocket) => _clients[webSocket];
 
+  WebSocket? getWebSocket(ClientInfo clientInfo) {
+    for (var e in _clients.entries) {
+      if (e.value == clientInfo) return e.key;
+    }
+    return null;
+  }
+
   void send(WebSocket webSocket, WSMessage message) {
     _send(webSocket, jsonEncode(message));
   }
 
   void broadcast(WSMessage message) {
     _broadcast(jsonEncode(message));
+  }
+
+  void disconnect(WebSocket webSocket) {
+    _clients.remove(webSocket);
+    webSocket.close();
+    if (_listener != null) {
+      _listener!.onClientChanged(_clients.values.toList());
+    }
   }
 
   @override
