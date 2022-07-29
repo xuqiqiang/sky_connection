@@ -20,13 +20,11 @@ class WSClient extends _WSClient {
   void start(WSConnectionType type, String serverIp, ClientInfo clientInfo,
       {ClientListener? listener}) {
     _listener = listener;
-    String extra = '';
-    if (clientInfo.extra != null && clientInfo.extra!.isNotEmpty) {
-      extra = '&extra=${clientInfo.extra}';
-    }
-    _start(
-        'ws://$serverIp:${getPort(type)}'
-        '?model=${clientInfo.model}&sn=${clientInfo.sn}$extra',
+    _start('$serverIp:${getPort(type)}', params: {
+      'model': clientInfo.model,
+      'sn': clientInfo.sn,
+      'extra': clientInfo.extra
+    },
         headers: createAuthHeaders());
   }
 
@@ -62,9 +60,26 @@ class WSClient extends _WSClient {
 abstract class _WSClient {
   static const tag = "_WSClient";
   WebSocket? _client;
+  String? _address;
 
-  void _start(String url, {Map<String, dynamic>? headers}) async {
+  String createUrl(String address, {Map<String, dynamic>? params}) {
+    String url = 'ws://$address';
+    if (params != null && params.isNotEmpty) {
+      url += '?';
+      params.forEach((key, value) {
+        if (value.toString().isNotEmpty) url += '$key=$value&';
+      });
+      url = url.substring(0, url.length - 1);
+    }
+    log('_start url $url', tag: tag);
+    return url;
+  }
+
+  void _start(String address,
+      {Map<String, dynamic>? params, Map<String, dynamic>? headers}) async {
     try {
+      _address = address;
+      String url = createUrl(address, params: params);
       HttpClient _httpClient = HttpClient();
       _httpClient.connectionTimeout = const Duration(seconds: 2);
       _httpClient.idleTimeout = const Duration(seconds: 10);
@@ -85,6 +100,11 @@ abstract class _WSClient {
       _onDisconnected(error: e, isConnecting: true);
     }
   }
+
+  String? get address =>
+      _client != null && _client!.readyState == WebSocket.open
+          ? _address
+          : null;
 
   void _onReceive(/*String|List<int>*/ data);
 
