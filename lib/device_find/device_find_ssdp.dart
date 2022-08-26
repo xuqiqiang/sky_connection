@@ -62,7 +62,7 @@ class SSDPClient extends SSDPBase {
   SSDPClient(RawDatagramSocket socket, int flag,
       {OnStateListener? stateListener})
       : super(socket, flag, stateListener: stateListener) {
-    _mTargets = _mTargetSet.join(";");
+    _mTargets = _mTargetSet.join("|");
   }
 
   @override
@@ -71,11 +71,12 @@ class SSDPClient extends SSDPBase {
 
     if (message.startsWith("NOTIFY * HTTP/1.1") ||
         message.startsWith("HTTP/1.1 200 OK")) {
-      var target = getValue(message, "ST");
-      var data = getValue(message, 'EXTRA');
-      if (target != null && _mTargets.contains(target)) {
-        _mListener?.call(datagram.address.address, parse2Flag(target), data!);
-      }
+      // var target = getValue(message, "ST");
+      // var data = getValue(message, 'EXTRA');
+      // if (target != null && _mTargets.contains(target)) {
+      //   _mListener?.call(datagram.address.address, parse2Flag(target), data!);
+      // }
+      _parseClientRec(message, datagram.address.address);
     }
   }
 
@@ -96,13 +97,31 @@ class SSDPClient extends SSDPBase {
       String msg = "M-SEARCH * HTTP/1.1\n"
               "Host: 239.255.255.250:1900\n"
               "Man: \"ssdp:discover\"\n"
-              "ST: " +
-          _mTargets +
-          "\n"
+              "ST: " + _mTargets + "\n"
               "MX: 3\n"
               "USER-AGENT: SSNWT SSDP Client\n";
       send(msg);
     });
+  }
+
+  void _parseClientRec(String message, String address) {
+    var targetStr = getValue(message, 'ST');
+    var dataStr = getValue(message, 'EXTRA');
+
+    if (targetStr == null || targetStr.isEmpty) {
+      return;
+    }
+    var targets = targetStr.split("|");
+    var extras = dataStr?.split("|");
+
+    for (var element in _mTargetSet) {
+      for (int i = 0; i < targets.length; i++) {
+        if (element.contains(targets[i])) {
+          _mListener?.call(
+              address, parse2Flag(targets[i]), extras == null ? "" : extras[i]);
+        }
+      }
+    }
   }
 }
 

@@ -136,11 +136,7 @@ class BroadcastDeviceFind extends DeviceFind {
       String message = String.fromCharCodes(d.data).trim();
       log("Received from ${d.address.address}:${d.port}  data $message",
           tag: _TAG);
-      var target = getValue(message, 'ST');
-      var data = getValue(message, 'EXTRA');
-      if (_mClientTargets!.contains(target)) {
-        _mListener?.call(d.address.address, parse2Flag(target!), data!);
-      }
+      _parseClientRec(message, d.address.address);
     });
   }
 
@@ -151,5 +147,25 @@ class BroadcastDeviceFind extends DeviceFind {
     }
     var broadcastIp = ip.substring(0, ip.lastIndexOf('.') + 1) + "255";
     return InternetAddress(broadcastIp);
+  }
+
+  void _parseClientRec(String message, String address) {
+    var targetStr = getValue(message, 'ST');
+    var dataStr = getValue(message, 'EXTRA');
+
+    if (targetStr == null || targetStr.isEmpty) {
+      return;
+    }
+    var targets = targetStr.split("|");
+    var extras = dataStr?.split("|");
+
+    _mClientTargets?.forEach((element) {
+      for (int i = 0; i < targets.length; i++) {
+        if (element.contains(targets[i])) {
+          _mListener?.call(
+              address, parse2Flag(targets[i]), extras == null ? "" : extras[i]);
+        }
+      }
+    });
   }
 }
