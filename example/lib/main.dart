@@ -35,17 +35,32 @@ class _MyAppState extends State<MyApp> with ServerListener {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const SizedBox(height: 4),
               ElevatedButton(
                   child: Text(
-                      '${mDeviceFind != null ? 'Stop' : 'Start'} find server'),
-                  onPressed: () => setState(mDeviceFind != null
+                      '${_deviceFindServer != null ? 'Stop' : 'Start'} find server'),
+                  onPressed: () => setState(_deviceFindServer != null
                       ? stopDeviceFindServer
                       : startDeviceFindServer)),
+              const SizedBox(height: 4),
+              ElevatedButton(
+                  child: Text(
+                      '${_deviceFindClient != null ? 'Stop' : 'Start'} find client'),
+                  onPressed: () => setState(_deviceFindClient != null
+                      ? stopDeviceFindClient
+                      : startDeviceFindClient)),
+              const SizedBox(height: 4),
               ElevatedButton(
                 child: Text(
                     '${wsServer != null ? 'Stop' : 'Start'} websocket server'),
                 onPressed: () =>
                     setState(wsServer != null ? stopWSServer : startWSServer),
+              ),
+              const SizedBox(height: 4),
+              Column(
+                children: [
+                  ..._findDeviceList.map((e) => Text(e)),
+                ],
               ),
             ],
           ),
@@ -55,21 +70,21 @@ class _MyAppState extends State<MyApp> with ServerListener {
   }
 
   WSServer? wsServer;
-  DeviceFindFactory? mDeviceFind;
+  DeviceFindFactory? _deviceFindServer;
 
   void startDeviceFindServer() {
     stopDeviceFindServer();
-    mDeviceFind = DeviceFindFactory(onState: onState);
-    mDeviceFind!.init().then(
-        (value) => mDeviceFind!.startServer(SSNWT_FLAG_FLY_SCREEN_SERVER));
+    _deviceFindServer = DeviceFindFactory(onState: onState);
+    _deviceFindServer!.init().then(
+        (value) => _deviceFindServer!.startServer(SSNWT_FLAG_FLY_SCREEN_SERVER));
   }
 
   void stopDeviceFindServer() {
-    if (mDeviceFind != null) {
-      mDeviceFind?.stopServer();
-      mDeviceFind?.release();
+    if (_deviceFindServer != null) {
+      _deviceFindServer?.stopServer();
+      _deviceFindServer?.release();
     }
-    mDeviceFind = null;
+    _deviceFindServer = null;
   }
 
   void onState(int state) {
@@ -78,6 +93,30 @@ class _MyAppState extends State<MyApp> with ServerListener {
         state == STATE_SSDP_INIT_SOCKET_ERROR) {
       Fluttertoast.showToast(msg: "网络发现服务异常");
     }
+  }
+
+  DeviceFindFactory? _deviceFindClient;
+  final Set<String> _findDeviceList = {};
+
+  void startDeviceFindClient() {
+    stopDeviceFindClient();
+    _deviceFindClient = DeviceFindFactory(onState: onState);
+    _deviceFindClient!.init().then(
+            (value) => _deviceFindClient!.startClient(SSNWT_FLAG_FLY_SCREEN_SERVER, onDeviceFind));
+  }
+
+  void onDeviceFind(String address, int flag, String data) {
+    setState(() {
+      _findDeviceList.add(address);
+    });
+  }
+
+  void stopDeviceFindClient() {
+    if (_deviceFindClient != null) {
+      _deviceFindClient?.stopClient();
+      _deviceFindClient?.release();
+    }
+    _deviceFindClient = null;
   }
 
   void startWSServer() {

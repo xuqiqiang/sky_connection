@@ -1,4 +1,5 @@
-import 'dart:io';
+import 'package:sky_device_info/beans.dart';
+import 'package:sky_device_info/sky_device_info.dart';
 
 bool get inDebugMode {
   bool _inDebugMode = false;
@@ -21,14 +22,27 @@ Map<String, dynamic> filter(Map<String, dynamic> map) {
   return newMap;
 }
 
+// Future<String?> getIntranetIp() async {
+//   String? ip;
+//   for (var interface in await NetworkInterface.list()) {
+//     for (var addr in interface.addresses) {
+//       if (addr.address.startsWith('192.') ||
+//           addr.address.startsWith('10.') ||
+//           addr.address.startsWith('172.')) ip = addr.address;
+//     }
+//   }
+//   return ip;
+// }
+
+final _skyDeviceInfoPlugin = SkyDeviceInfo();
+
 Future<String?> getIntranetIp() async {
-  String? ip;
-  for (var interface in await NetworkInterface.list()) {
-    for (var addr in interface.addresses) {
-      if (addr.address.startsWith('192.') ||
-          addr.address.startsWith('10.') ||
-          addr.address.startsWith('172.')) ip = addr.address;
+  DeviceInfo? deviceInfo = await _skyDeviceInfoPlugin.loadDeviceInfo();
+  if (deviceInfo != null) {
+    NetworkInfo? networkInfo = _skyDeviceInfoPlugin.networkInfo;
+    if (networkInfo != null && networkInfo.networkAdapters.isNotEmpty) {
+      return networkInfo.networkAdapters.first.ipAddress;
     }
   }
-  return ip;
+  return null;
 }

@@ -29,17 +29,17 @@ class DeviceFindFactory extends DeviceFind {
   List<DeviceFind> mDeviceFindList = [];
 
   DeviceFindFactory(
-      {OnStateListener? onState, type = DEVICE_FOUND_BROADCAST_SSDP}) {
+      {OnStateListener? onState, type = DEVICE_FOUND_BROADCAST_SSDP, bool? showLog}) {
     switch (type) {
       case DEVICE_FOUND_BROADCAST:
-        mDeviceFindList.add(BroadcastDeviceFind(stateListener: onState));
+        mDeviceFindList.add(BroadcastDeviceFind(stateListener: onState, showLog: showLog));
         break;
       case DEVICE_FOUND_SSDP:
-        mDeviceFindList.add(SSDPDeviceFind(stateListener: onState));
+        mDeviceFindList.add(SSDPDeviceFind(stateListener: onState, showLog: showLog));
         break;
       case DEVICE_FOUND_BROADCAST_SSDP:
-        mDeviceFindList.add(BroadcastDeviceFind(stateListener: onState));
-        mDeviceFindList.add(SSDPDeviceFind(stateListener: onState));
+        mDeviceFindList.add(BroadcastDeviceFind(stateListener: onState, showLog: showLog));
+        mDeviceFindList.add(SSDPDeviceFind(stateListener: onState, showLog: showLog));
         break;
     }
   }

@@ -11,6 +11,7 @@ class BroadcastDeviceFind extends DeviceFind {
   static const _PORT = 9898;
   late RawDatagramSocket _mSocket;
   late OnStateListener? _mStateListener;
+  late bool? _showLog;
   bool _mIsSocketInit = false;
 
   //客户端
@@ -24,8 +25,9 @@ class BroadcastDeviceFind extends DeviceFind {
   InternetAddress? _BroadcastAddress;
   String _ServerExtra = "";
 
-  BroadcastDeviceFind({OnStateListener? stateListener}) {
+  BroadcastDeviceFind({OnStateListener? stateListener, bool? showLog}) {
     _mStateListener = stateListener;
+    _showLog = showLog;
   }
 
   @override
@@ -120,7 +122,9 @@ class BroadcastDeviceFind extends DeviceFind {
   void _send() {
     String sendString =
         "BroadCast\nST:" + _mServerTarget! + "\nEXTRA:" + _ServerExtra + "\n;";
-    log('_send $sendString', tag: _TAG);
+    if (_showLog == true) {
+      log('_send $sendString', tag: _TAG);
+    }
     try {
       _mSocket.send(
           const Utf8Encoder().convert(sendString), _BroadcastAddress!, 9898);
@@ -134,8 +138,10 @@ class BroadcastDeviceFind extends DeviceFind {
       Datagram? d = _mSocket.receive();
       if (d == null) return;
       String message = String.fromCharCodes(d.data).trim();
-      log("Received from ${d.address.address}:${d.port}  data $message",
-          tag: _TAG);
+      if (_showLog == true) {
+        log("Received from ${d.address.address}:${d.port}  data $message",
+            tag: _TAG);
+      }
       var target = getValue(message, 'ST');
       var data = getValue(message, 'EXTRA');
       if (_mClientTargets!.contains(target)) {

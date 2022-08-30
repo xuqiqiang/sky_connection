@@ -12,6 +12,7 @@ const SSDP_PORT = 1900;
 abstract class SSDPBase {
   static const _TAG = 'SSDPBase';
   late RawDatagramSocket _mSocket;
+  late bool? _showLog;
   OnStateListener? _mStateListener;
 
   //服务端只能有一个值，客户端可能有多个值
@@ -20,10 +21,11 @@ abstract class SSDPBase {
   late Timer mTimer;
 
   SSDPBase(RawDatagramSocket socket, int flag,
-      {OnStateListener? stateListener}) {
+      {OnStateListener? stateListener, bool? showLog}) {
     _mSocket = socket;
     _mTargetSet = parse2Targets(flag);
     _mStateListener = stateListener;
+    _showLog = showLog;
   }
 
   void start() {
@@ -42,7 +44,9 @@ abstract class SSDPBase {
   void onReceive(Datagram datagram);
 
   void send(String data) {
-    log('_send\n $data', tag: _TAG);
+    if (_showLog == true) {
+      log('_send\n $data', tag: _TAG);
+    }
     try {
       InternetAddress group = InternetAddress(SSDP_MULTICAST_ADDR);
       _mSocket.send(const Utf8Encoder().convert(data), group, SSDP_PORT);
@@ -60,8 +64,8 @@ class SSDPClient extends SSDPBase {
   OnFindListener? _mListener;
 
   SSDPClient(RawDatagramSocket socket, int flag,
-      {OnStateListener? stateListener})
-      : super(socket, flag, stateListener: stateListener) {
+      {OnStateListener? stateListener, bool? showLog})
+      : super(socket, flag, stateListener: stateListener, showLog: showLog) {
     _mTargets = _mTargetSet.join(";");
   }
 
@@ -112,8 +116,8 @@ class SSDPServer extends SSDPBase {
   var _ServerExtra = "";
 
   SSDPServer(RawDatagramSocket socket, int flag,
-      {OnStateListener? stateListener})
-      : super(socket, flag, stateListener: stateListener) {
+      {OnStateListener? stateListener, bool? showLog})
+      : super(socket, flag, stateListener: stateListener, showLog: showLog) {
     mTarget = _mTargetSet.first;
   }
 
@@ -181,14 +185,16 @@ class SSDPDeviceFind extends DeviceFind {
   late RawDatagramSocket _mSocket;
   late NetworkInterface mNetworkInterface;
   late StreamSubscription _receiveSub;
+  late bool? _showLog;
   OnStateListener? _mStateListener;
   bool _mIsSocketInit = false;
 
   SSDPClient? mSSDPClient;
   SSDPServer? mSSDPServer;
 
-  SSDPDeviceFind({OnStateListener? stateListener}) {
+  SSDPDeviceFind({OnStateListener? stateListener, bool? showLog}) {
     _mStateListener = stateListener;
+    _showLog = showLog;
   }
 
   @override
@@ -208,7 +214,8 @@ class SSDPDeviceFind extends DeviceFind {
       log('_mIsSocketInit is false!', tag: _TAG);
       return;
     }
-    mSSDPClient = SSDPClient(_mSocket, flag, stateListener: _mStateListener);
+    mSSDPClient = SSDPClient(_mSocket, flag,
+        stateListener: _mStateListener, showLog: _showLog);
     mSSDPClient!.setOnFindDeviceListener(listener);
     mSSDPClient!.start();
   }
@@ -220,7 +227,8 @@ class SSDPDeviceFind extends DeviceFind {
       log('_mIsSocketInit is false!', tag: _TAG);
       return;
     }
-    mSSDPServer = SSDPServer(_mSocket, flag, stateListener: _mStateListener);
+    mSSDPServer = SSDPServer(_mSocket, flag,
+        stateListener: _mStateListener, showLog: _showLog);
     mSSDPServer!.start();
   }
 
@@ -290,8 +298,12 @@ class SSDPDeviceFind extends DeviceFind {
     _receiveSub = _mSocket.listen((RawSocketEvent e) {
       Datagram? d = _mSocket.receive();
       if (d == null) return;
-      log('Received from ${d.address.address}:${d.port} data:${String.fromCharCodes(d.data).trim()}',
-          tag: _TAG);
+      if (_showLog == true) {
+        log(
+            'Received from ${d.address.address}:${d.port}'
+            ' data:${String.fromCharCodes(d.data).trim()}',
+            tag: _TAG);
+      }
       onReceive(d);
     });
   }
