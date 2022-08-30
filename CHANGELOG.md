@@ -1,4 +1,8 @@
-## 0.0.3
+## 0.0.5
+
+* Fix WebSocket error.
+
+## 0.0.4
 
 * Fix IP address error.
 
