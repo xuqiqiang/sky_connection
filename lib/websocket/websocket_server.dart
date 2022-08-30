@@ -216,30 +216,31 @@ abstract class _WSServer<T> {
 
       setAllowOriginHeader(request);
 
-      if (request.uri.pathSegments.isNotEmpty) {
-        _onHttpRequest(request);
+      List<String> pathSegments = request.uri.pathSegments;
+      if (pathSegments.isNotEmpty && pathSegments[0] == 'ws') {
+        T? t = _onHandshake(request);
+        if (t != null) {
+          WebSocket webSocket = await WebSocketTransformer.upgrade(request);
+          log('upgrade ${webSocket.readyState}', tag: tag);
+          if (webSocket.readyState == WebSocket.open) {
+            _onConnected(webSocket, t);
+            webSocket.listen((event) {
+              _onReceive(webSocket, event);
+            }, onError: (error) {
+              _onDisconnected(webSocket, error: error);
+            }, onDone: () {
+              _onDisconnected(webSocket);
+            });
+          }
+        } else {
+          request.response
+            ..statusCode = HttpStatus.badRequest
+            ..close();
+        }
         return;
       }
 
-      T? t = _onHandshake(request);
-      if (t != null) {
-        WebSocket webSocket = await WebSocketTransformer.upgrade(request);
-        log('upgrade ${webSocket.readyState}', tag: tag);
-        if (webSocket.readyState == WebSocket.open) {
-          _onConnected(webSocket, t);
-          webSocket.listen((event) {
-            _onReceive(webSocket, event);
-          }, onError: (error) {
-            _onDisconnected(webSocket, error: error);
-          }, onDone: () {
-            _onDisconnected(webSocket);
-          });
-        }
-      } else {
-        request.response
-          ..statusCode = HttpStatus.badRequest
-          ..close();
-      }
+      _onHttpRequest(request);
     });
   }
 

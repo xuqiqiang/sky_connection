@@ -5,6 +5,8 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:sky_connection/sky_connection.dart';
 import 'package:sky_connection/utils/utils.dart';
 import 'package:sky_connection/websocket/beans.dart';
+import 'package:sky_device_info/beans.dart';
+import 'package:sky_device_info/sky_device_info.dart';
 
 void main() {
   runApp(const MyApp());
@@ -17,7 +19,7 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> with ServerListener {
+class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
@@ -52,14 +54,18 @@ class _MyAppState extends State<MyApp> with ServerListener {
               const SizedBox(height: 4),
               ElevatedButton(
                 child: Text(
-                    '${wsServer != null ? 'Stop' : 'Start'} websocket server'),
+                    '${wsServer.isOpen ? 'Stop' : 'Start'} websocket server'),
                 onPressed: () =>
-                    setState(wsServer != null ? stopWSServer : startWSServer),
+                    setState(wsServer.isOpen ? stopWSServer : startWSServer),
               ),
               const SizedBox(height: 4),
               Column(
                 children: [
-                  ..._findDeviceList.map((e) => Text(e)),
+                  ..._findDeviceList.map((ipAddress) => TextButton(onPressed: () async {
+                    wsClient?.stop();
+                    wsClient = WSClientDelegate(serverIp: ipAddress);
+                    wsClient!.connect();
+                  }, child: Text(ipAddress))),
                 ],
               ),
             ],
@@ -69,7 +75,8 @@ class _MyAppState extends State<MyApp> with ServerListener {
     );
   }
 
-  WSServer? wsServer;
+  WSServerDelegate wsServer = WSServerDelegate();
+  WSClientDelegate? wsClient;
   DeviceFindFactory? _deviceFindServer;
 
   void startDeviceFindServer() {
@@ -120,41 +127,92 @@ class _MyAppState extends State<MyApp> with ServerListener {
   }
 
   void startWSServer() {
-    stopWSServer();
-    wsServer = WSServer(
-        serverInfo: ServerInfo(type: deviceTypeAndroid, name: 'Huawei'));
-    wsServer!.start(WSConnectionType.flyScreen, listener: this);
+    wsServer.start(ServerInfo(type: deviceTypeAndroid, name: 'Huawei'));
   }
 
   void stopWSServer() {
-    if (wsServer != null) {
-      wsServer!.stop();
-    }
+    wsServer.stop();
+  }
+}
+
+class WSServerDelegate implements ServerListener {
+  WSServer? wsServer;
+
+  bool get isOpen => wsServer != null;
+
+  start(ServerInfo serverInfo) async {
+    stop();
+    wsServer = WSServer(
+        serverInfo: serverInfo);
+    wsServer!.start(WSConnectionType.flyScreen, listener: this);
+  }
+
+  void stop() {
+    wsServer?.stop();
     wsServer = null;
   }
 
   @override
   void onClientChanged(List<ClientInfo> clients) {
-    log('onClientChanged $clients');
+    log('WSServerDelegate onClientChanged $clients');
   }
 
   @override
   void onHttpRequest(HttpRequest request) {
-    log('onHttpRequest $request');
+    log('WSServerDelegate onHttpRequest $request');
   }
 
   @override
   void onMessage(WebSocket webSocket, WSMessage message) {
-    log('onMessage $message');
+    log('WSServerDelegate onMessage $message');
   }
 
   @override
   void onServerError({error}) {
-    log('onServerError $error');
+    log('WSServerDelegate onServerError $error');
   }
 
   @override
   void onServerStart() {
-    getIntranetIp().then((value) => log('onServerStart $value'));
+    getIntranetIp().then((value) => log('WSServerDelegate onServerStart $value'));
+  }
+}
+
+class WSClientDelegate implements ClientListener {
+  final String serverIp;
+  WSClient? wsClient;
+
+  WSClientDelegate({required this.serverIp});
+
+  connect() async {
+    stop();
+    DeviceInfo? deviceInfo = await SkyDeviceInfo().loadDeviceInfo();
+    ClientInfo clientInfo = ClientInfo(
+        model: generateRandomString(6),
+        sn: generateRandomString(6),
+        extra: deviceInfo?.deviceName ?? 'unknown');
+    wsClient = WSClient();
+    wsClient!.start(WSConnectionType.flyScreen, serverIp, clientInfo,
+        listener: this);
+  }
+
+  @override
+  void onConnected(ServerInfo serverInfo) {
+    log('WSClientDelegate onConnected $serverInfo');
+  }
+
+  @override
+  void onDisconnected({error, isConnecting}) {
+    log('WSClientDelegate onDisconnected $error $isConnecting');
+  }
+
+  @override
+  void onMessage(WSMessage message) {
+    log('WSClientDelegate onConnected $message');
+  }
+
+  void stop() {
+    wsClient?.stop();
+    wsClient = null;
   }
 }

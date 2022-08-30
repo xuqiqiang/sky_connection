@@ -63,7 +63,7 @@ abstract class _WSClient {
   String? _address;
 
   String createUrl(String address, {Map<String, dynamic>? params}) {
-    String url = 'ws://$address';
+    String url = 'ws://$address/ws';
     if (params != null && params.isNotEmpty) {
       url += '?';
       params.forEach((key, value) {
