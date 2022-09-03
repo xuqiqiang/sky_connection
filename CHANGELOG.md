@@ -1,3 +1,7 @@
+## 0.0.6
+
+* Fix Finder error.
+
 ## 0.0.5
 
 * Fix WebSocket error.
